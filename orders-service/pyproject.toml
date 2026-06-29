@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "orders-service"
 version = "0.1.0"
-description = "Orders API service for Café Cloud"
+description = "Orders API service for Cafe Cloud"
 authors = ["Kevyn Franco <kevynfranco@gmail.com>"]
 package-mode = false
 

@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Café Cloud — Notifier Service",
+    title="Cafe Cloud — Notifier Service",
     version="0.1.0",
     lifespan=lifespan,
 )

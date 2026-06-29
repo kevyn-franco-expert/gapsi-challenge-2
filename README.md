@@ -1,30 +1,30 @@
-# Café Cloud — Distributed Order System
+# Cafe Cloud — Distributed Order System
 
-Prueba técnica FullStack Developer para GAPSI.
+Technical test for a FullStack Developer role at GAPSI.
 
-Sistema distribuido self-contained compuesto por 3 microservicios FastAPI, 1 job de limpieza, PostgreSQL, RabbitMQ y MongoDB, orquestado con Docker Compose.
+A self-contained distributed system made of 3 FastAPI microservices, 1 cleanup job, PostgreSQL, RabbitMQ, and MongoDB, orchestrated with Docker Compose.
 
 ## Stack
 
-| Componente | Tecnología |
-|------------|-----------|
-| Lenguaje | Python 3.12 |
+| Component | Technology |
+|-----------|-----------|
+| Language | Python 3.12 |
 | APIs | FastAPI + Pydantic v2 |
 | SQL DB | PostgreSQL 16 |
-| Migraciones | Alembic |
+| Migrations | Alembic |
 | Message Broker | RabbitMQ 3.13 (management) |
 | NoSQL | MongoDB 7 |
 | Scheduling | APScheduler |
 | Logs | structlog JSON |
-| Métricas | prometheus_client |
-| Empaquetado | Poetry |
-| Infra local | Docker Compose |
+| Metrics | prometheus_client |
+| Packaging | Poetry |
+| Local infra | Docker Compose |
 
-## Arquitectura
+## Architecture
 
 ```text
 ┌──────────────┐     POST /orders        ┌─────────────────┐
-│   Cliente    │ ───────────────────────>│  orders-service │
+│   Client     │ ───────────────────────>│  orders-service │
 └──────────────┘   Idempotency-Key       └────────┬────────┘
                                                   │
                                                   │ Transactional Outbox
@@ -59,40 +59,40 @@ Sistema distribuido self-contained compuesto por 3 microservicios FastAPI, 1 job
               │
               ▼
     ┌─────────────────────┐
-    │     cleanup-job     │  (cada 60s borra notificaciones >24h)
+    │     cleanup-job     │  (every 60s deletes notifications >24h old)
     └─────────────────────┘
 ```
 
-## Requisitos previos
+## Prerequisites
 
 - Docker Engine 24+
 - Docker Compose 2.20+
-- (Opcional) Python 3.12 + Poetry para ejecutar tests unitarios fuera de contenedores.
+- (Optional) Python 3.12 + Poetry to run unit tests outside containers.
 
-## Ejecutar el sistema
+## Running the system
 
 ```bash
-# 1. Clonar el repositorio
-cd cafe-cloud
+# 1. Clone the repository
+cd gapsi-challenge-2
 
-# 2. Copiar variables de entorno (valores por defecto ya funcionan localmente)
+# 2. Copy environment variables (defaults already work locally)
 cp .env.example .env
 
-# 3. Levantar todo
+# 3. Start everything
 docker compose up --build -d
 
-# 4. Verificar health de los servicios
+# 4. Verify service health
 curl http://localhost:8000/health   # orders
 curl http://localhost:8001/health   # processor
 curl http://localhost:8002/health   # notifier
 curl http://localhost:8003/health   # cleanup-job
 ```
 
-> RabbitMQ Management UI: http://localhost:15672 (user/pass definidos en `.env`, por defecto `cafe` / `cafe_secret`)
+> RabbitMQ Management UI: http://localhost:15672 (user/pass are defined in `.env`, default `cafe` / `cafe_secret`)
 
-## Flujo de prueba con curl
+## Test flow with curl
 
-### 1. Crear una orden
+### 1. Create an order
 
 ```bash
 curl -X POST http://localhost:8000/orders \
@@ -107,7 +107,7 @@ curl -X POST http://localhost:8000/orders \
   }'
 ```
 
-Respuesta esperada:
+Expected response:
 
 ```json
 {
@@ -119,19 +119,19 @@ Respuesta esperada:
 }
 ```
 
-### 2. Ver idempotencia
+### 2. Verify idempotency
 
-Repetir el comando anterior con el mismo `Idempotency-Key`. Debe retornar la **misma** orden sin crear un duplicado.
+Repeat the command above with the same `Idempotency-Key`. It must return the **same** order without creating a duplicate.
 
-### 3. Consultar notificaciones
+### 3. Query notifications
 
-Después de ~2-5 segundos (tiempo simulado de preparación):
+After ~2-5 seconds (simulated preparation time):
 
 ```bash
 curl http://localhost:8002/notifications/abc123
 ```
 
-Respuesta esperada:
+Expected response:
 
 ```json
 [
@@ -144,7 +144,7 @@ Respuesta esperada:
 ]
 ```
 
-### 4. Ejecutar cleanup manualmente
+### 4. Run cleanup manually
 
 ```bash
 curl -X POST http://localhost:8003/jobs/cleanup/run
@@ -152,7 +152,7 @@ curl -X POST http://localhost:8003/jobs/cleanup/run
 
 ## Tests
 
-### Unitarios (requieren Python 3.12 + Poetry)
+### Unit tests (require Python 3.12 + Poetry)
 
 ```bash
 poetry -C orders-service install
@@ -168,45 +168,45 @@ poetry -C cleanup-job install
 poetry -C cleanup-job run pytest -q
 ```
 
-### Integración (requiere Docker Compose levantado)
+### Integration test (requires Docker Compose running)
 
 ```bash
 make test-integration
-# o directamente:
+# or directly:
 bash scripts/integration-test.sh
 ```
 
-El script valida:
-- Creación de orden.
-- Idempotencia con la misma `Idempotency-Key`.
-- Eventual llegada de la notificación al notifier-service.
+The script validates:
+- Order creation.
+- Idempotency with the same `Idempotency-Key`.
+- Eventual delivery of the notification to the notifier-service.
 
-## Decisiones técnicas
+## Technical decisions
 
 ### PostgreSQL + asyncpg
-Elegido por transacciones ACID, soporte nativo de `RETURNING` y bloqueos pesimistas, necesarios para el patrón **Transactional Outbox** y la gestión de claves de idempotencia.
+Chosen for ACID transactions, native `RETURNING` support, and pessimistic locking, required for the **Transactional Outbox** pattern and idempotency-key management.
 
 ### RabbitMQ
-Proporciona exchanges/colas duraderas, **publisher confirms**, **consumer acks** y **dead-letter exchanges (DLX)** nativos para retries con backoff exponencial sin implementar lógica compleja de reenvío manual.
+Provides durable exchanges/queues, **publisher confirms**, **consumer acks**, and native **dead-letter exchanges (DLX)** for exponential backoff retries without complex manual redelivery logic.
 
 ### Transactional Outbox
-Cuando se crea una orden, el evento `orders.created` se inserta en la tabla `outbox` dentro de la misma transacción. Un relay asíncrono publica los eventos pendientes en RabbitMQ y los marca como procesados. Esto garantiza consistencia entre la base de datos y el broker bajo entrega al-menos-una-vez.
+When an order is created, the `orders.created` event is inserted into the `outbox` table within the same transaction. An async relay publishes pending events to RabbitMQ and marks them as processed. This guarantees consistency between the database and the broker under at-least-once delivery.
 
-### Idempotencia
-- `POST /orders` requiere el header `Idempotency-Key`.
-- Se valida en la misma transacción que crea la orden.
-- Si la key ya existe, se retorna la orden previa sin duplicar.
-- El consumer del processor verifica el estado `COMPLETED` antes de re-procesar.
+### Idempotency
+- `POST /orders` requires the `Idempotency-Key` header.
+- It is validated inside the same transaction that creates the order.
+- If the key already exists, the previous order is returned without duplication.
+- The processor consumer checks the `COMPLETED` status before re-processing.
 
 ### DLX / Retries
-Las colas principales declaran `x-dead-letter-exchange`. Si un mensaje falla (excepción no controlada), RabbitMQ lo nack y lo envía a una cola DLX con TTL de 10s, que luego lo reinyecta vía el exchange de retry. Si el mensaje se procesa exitosamente se hace ack manual.
+Main queues declare `x-dead-letter-exchange`. If a message fails (unhandled exception), RabbitMQ nacks it and sends it to a DLX queue with a 10s TTL, which then re-injects it via the retry exchange. Successful messages are manually acked.
 
-### Observabilidad
-- Todos los servicios exponen `/health` y `/metrics`.
-- Logs estructurados en JSON con `timestamp`, `level`, `service`, `trace_id`.
-- El `trace_id` se genera en orders-service y se propaga por headers de mensaje y contexto de logs.
+### Observability
+- All services expose `/health` and `/metrics`.
+- Structured JSON logs with `timestamp`, `level`, `service`, `trace_id`.
+- `trace_id` is generated in orders-service and propagated through message headers and log context.
 
-## Ejemplos de eventos
+## Event examples
 
 ### `orders.created`
 
@@ -234,19 +234,19 @@ Las colas principales declaran `x-dead-letter-exchange`. Si un mensaje falla (ex
 }
 ```
 
-## Seguridad
+## Security
 
-- Credenciales y configuración vía variables de entorno (ver `.env.example`); no están hardcodeadas en el código.
-- API key opcional configurada por `API_KEY`; si está presente, `GET /notifications/{customer_id}` la exige mediante header `X-API-Key`.
+- Credentials and configuration are provided via environment variables (see `.env.example`); they are not hardcoded in the code.
+- Optional API key configured through `API_KEY`; when present, `GET /notifications/{customer_id}` requires it via the `X-API-Key` header.
 
-## Limpieza
+## Cleanup
 
-El `cleanup-job` ejecuta cada 60 segundos una tarea que elimina notificaciones con `created_at` mayor a 24 horas. También expone `POST /jobs/cleanup/run` para ejecución manual.
+The `cleanup-job` runs every 60 seconds a task that deletes notifications with `created_at` older than 24 hours. It also exposes `POST /jobs/cleanup/run` for manual execution.
 
-## Estructura del repositorio
+## Repository structure
 
 ```text
-cafe-cloud/
+gapsi-challenge-2/
 ├── docker-compose.yml
 ├── Makefile
 ├── README.md
@@ -269,6 +269,6 @@ cafe-cloud/
 
 ## Troubleshooting
 
-- Si un servicio no levanta, revisar logs: `docker compose logs -f <servicio>`.
-- Asegurar que los puertos 5432, 5672, 15672, 27017, 8000-8003 estén libres.
-- Para reiniciar desde cero: `docker compose down -v && docker compose up --build -d`.
+- If a service does not start, check the logs: `docker compose logs -f <service>`.
+- Make sure ports 5432, 5672, 15672, 27017, 8000-8003 are free.
+- To restart from scratch: `docker compose down -v && docker compose up --build -d`.

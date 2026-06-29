@@ -1,3 +1,3 @@
 # Shared
 
-Shared utilities for the Café Cloud microservices.
+Shared utilities for the Cafe Cloud microservices.

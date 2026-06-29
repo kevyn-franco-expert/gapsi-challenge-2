@@ -1,4 +1,4 @@
-"""Shared Pydantic settings for all Café Cloud services."""
+"""Shared Pydantic settings for all Cafe Cloud services."""
 from __future__ import annotations
 from functools import lru_cache
 from typing import Optional

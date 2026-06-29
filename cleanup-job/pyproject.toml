@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "cleanup-job"
 version = "0.1.0"
-description = "Notification cleanup job for Café Cloud"
+description = "Notification cleanup job for Cafe Cloud"
 authors = ["Kevyn Franco <kevynfranco@gmail.com>"]
 package-mode = false
 

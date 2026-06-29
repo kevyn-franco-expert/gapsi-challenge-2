@@ -6,7 +6,7 @@ BASE_URL_NOTIFIER="${NOTIFIER_URL:-http://localhost:8002}"
 CUSTOMER_ID="cust-$(date +%s)"
 IDEMPOTENCY_KEY="idem-$(uuidgen 2>/dev/null || date +%s%N)"
 
-echo "=== Café Cloud Integration Test ==="
+echo "=== Cafe Cloud Integration Test ==="
 echo "Customer: $CUSTOMER_ID"
 echo "Idempotency-Key: $IDEMPOTENCY_KEY"
 

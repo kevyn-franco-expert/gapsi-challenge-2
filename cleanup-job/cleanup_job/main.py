@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Café Cloud — Cleanup Job",
+    title="Cafe Cloud — Cleanup Job",
     version="0.1.0",
     lifespan=lifespan,
 )

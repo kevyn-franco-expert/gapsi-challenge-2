@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "shared"
 version = "0.1.0"
-description = "Shared utilities for Café Cloud microservices"
+description = "Shared utilities for Cafe Cloud microservices"
 authors = ["Kevyn Franco <kevynfranco@gmail.com>"]
 readme = "README.md"
 packages = [{include = "shared"}]
